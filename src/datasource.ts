@@ -9,18 +9,19 @@ import {
   FieldType,
 } from '@grafana/data';
 
-import { MyQuery, MyDataSourceOptions, defaultQuery } from './types';
+import { MyQuery, JsonApiDataSourceOptions, defaultQuery } from './types';
 
-export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
-  resolution: number;
-  constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
+export class DataSource extends DataSourceApi<MyQuery, JsonApiDataSourceOptions> {
+  url: string;
+  constructor(instanceSettings: DataSourceInstanceSettings<JsonApiDataSourceOptions>) {
     super(instanceSettings);
-    this.resolution = instanceSettings.jsonData.resolution || 1000.0;
+    this.url = instanceSettings.url! || 'http://localhost:8080';
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
     const data = options.targets.map(target => {
       const query = defaults(target, defaultQuery);
+      query.baseurl = this.url;
       // const sampleData = {
       //   buckets: [
       //     {
@@ -71,9 +72,40 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       //     },
       //   ],
       // };
+      const sampleData = [
+        {
+          baseField: 'ABC-1',
+          childFields: [
+            {
+              doc_count: 23850053,
+            },
+            {
+              doc_count: 23123,
+            },
+            {
+              doc_count: 23123,
+            },
+          ],
+        },
+        {
+          baseField: 'ABC-2',
+          childFields: [
+            {
+              doc_count: 238,
+            },
+            {
+              doc_count: 231,
+            },
+            {
+              doc_count: 244,
+            },
+          ],
+        },
+      ];
+      query.childFields.unshift(query.baseField);
       const frame = new MutableDataFrame({
         refId: query.refId,
-        fields: query.fields.map(element => {
+        fields: query.childFields.map(element => {
           return { name: element, type: FieldType.string };
         }),
       });
@@ -88,8 +120,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       //     })),
       //   };
       // });
-      // tsf.forEach(elem => {
-      //   frame.appendRow([elem.svc, elem.buckets[0].count, elem.buckets[1].count, elem.buckets[2].count]);
+      // sampleData.buckets.forEach(elem => {
+      //   const svcName: string = elem.key;
+      //   frame.appendRow([
+      //     svcName,
+      //     elem.response_category.buckets[0].doc_count,
+      //     elem.response_category.buckets[1].doc_count,
+      //     elem.response_category.buckets[2].doc_count,
+      //   ]);
       // });
       // const apiData: { [index: string]: any } = [
       //   { name: 'field1', some: 'data' },
@@ -99,7 +137,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       // const nameKey: string = frame.fields[0].name;
       // const newLocal = apiData.map((elem: string) => elem[nameKey]);
       // frame.appendRow(newLocal);
-
+      sampleData.forEach(elem => {
+        let frameResult = [elem.baseField];
+        elem.childFields.forEach(cf => {
+          frameResult.push(String(cf.doc_count));
+        });
+        frame.appendRow(frameResult);
+        
+      });
       return frame;
     });
 

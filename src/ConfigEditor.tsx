@@ -1,100 +1,21 @@
-import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms } from '@grafana/ui';
+import React from 'react';
+
+import { DataSourceHttpSettings } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions, MySecureJsonData } from './types';
+import { JsonApiDataSourceOptions } from './types';
 
-const { SecretFormField, FormField } = LegacyForms;
+import {} from '@emotion/core';
 
-interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions> {}
+type Props = DataSourcePluginOptionsEditorProps<JsonApiDataSourceOptions>;
 
-interface State {}
-
-export class ConfigEditor extends PureComponent<Props, State> {
-  onPathChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    const jsonData = {
-      ...options.jsonData,
-      path: event.target.value,
-    };
-    onOptionsChange({ ...options, jsonData });
-  };
-
-  // Secure field (only sent to the backend)
-  onAPIKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      secureJsonData: {
-        apiKey: event.target.value,
-      },
-    });
-  };
-
-  onResolutionChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    const jsonData = {
-      ...options.jsonData,
-      resolution: parseFloat(event.target.value),
-    };
-    onOptionsChange({ ...options, jsonData });
-  };
-
-  onResetAPIKey = () => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      secureJsonFields: {
-        ...options.secureJsonFields,
-        apiKey: false,
-      },
-      secureJsonData: {
-        ...options.secureJsonData,
-        apiKey: '',
-      },
-    });
-  };
-
-  render() {
-    const { options } = this.props;
-    const { jsonData, secureJsonFields } = options;
-    const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
-
-    return (
-      <div className="gf-form-group">
-        <div className="gf-form">
-          <FormField
-            label="Path"
-            labelWidth={6}
-            inputWidth={20}
-            onChange={this.onPathChange}
-            value={jsonData.path || ''}
-            placeholder="json field returned to frontend"
-          />
-        </div>
-
-        <div className="gf-form-inline">
-          <div className="gf-form">
-            <SecretFormField
-              isConfigured={(secureJsonFields && secureJsonFields.apiKey) as boolean}
-              value={secureJsonData.apiKey || ''}
-              label="API Key"
-              placeholder="secure json field (backend only)"
-              labelWidth={6}
-              inputWidth={20}
-              onReset={this.onResetAPIKey}
-              onChange={this.onAPIKeyChange}
-            />
-          </div>
-        </div>
-        <div className="gf-form">
-          <FormField
-            label="Resolution"
-            onChange={this.onResolutionChange}
-            value={jsonData.resolution || ''}
-            placeholder="Enter a number"
-          />
-        </div>
-      </div>
-    );
-  }
-}
+export const ConfigEditor: React.FC<Props> = ({ options, onOptionsChange }) => {
+  return (
+    <>
+      <DataSourceHttpSettings
+        defaultUrl="http://localhost:8080"
+        dataSourceConfig={options}
+        onChange={onOptionsChange}
+      />
+    </>
+  );
+};

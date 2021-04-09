@@ -1,28 +1,33 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataQuery, DataSourceJsonData, FieldType } from '@grafana/data';
 
-export interface MyQuery extends DataQuery {
-  queryText?: string;
-  constant: number;
-  childFields: string[];
-  baseField: string;
-  baseurl: string;
-  body: string;
+interface JsonField {
+  name?: string;
+  jsonPath: string;
+  type?: FieldType;
+}
+
+export type Pair<T, K> = [T, K];
+
+export interface JsonApiQuery extends DataQuery {
+  fields: JsonField[];
   method: string;
+  urlPath: string;
+  queryParams: string;
+  params: Array<Pair<string, string>>;
+  headers: Array<Pair<string, string>>;
+  body: string;
+  cacheDurationSeconds: number;
+
+  // Keep for backwards compatibility with older version of variables query editor.
+  jsonPath?: string;
 }
 
-export const defaultQuery: Partial<MyQuery> = {
-  constant: 6.5,
-  childFields: [],
-  baseurl: 'http://localhost:8080',
+export const defaultQuery: Partial<JsonApiQuery> = {
+  cacheDurationSeconds: 300,
   method: 'GET',
+  queryParams: '',
+  urlPath: '',
 };
-
-/**
- * Value that is used in the backend, but never sent over HTTP to the frontend
- */
-export interface MySecureJsonData {
-  apiKey?: string;
-}
 
 export interface JsonApiDataSourceOptions extends DataSourceJsonData {
   queryParams?: string;

@@ -11,7 +11,6 @@ import {
   CodeEditor,
   useTheme,
   InfoBox,
-  LegacyForms,
 } from '@grafana/ui';
 import { SelectableValue, FieldType, QueryEditorProps } from '@grafana/data';
 import { JsonApiQuery, defaultQuery, JsonApiDataSourceOptions, Pair } from '../types';
@@ -24,7 +23,6 @@ import { JsonDataSource } from 'datasource';
 interface Props extends QueryEditorProps<JsonDataSource, JsonApiQuery, JsonApiDataSourceOptions> {
   limitFields?: number;
 }
-const { FormField } = LegacyForms;
 export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limitFields, datasource, range }) => {
   const [bodyType, setBodyType] = useState('plaintext');
   const [tabIndex, setTabIndex] = useState(0);
@@ -62,7 +60,7 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
     onChange({ ...query, headers });
   };
 
-  const onChangePath = (i: number, e: string) => {
+  const onChangePath = (i: number) => (e: string) => {
     onChange({
       ...query,
       fields: fields.map((field, n) => (i === n ? { ...fields[i], jsonPath: e } : field)),
@@ -76,13 +74,22 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
     });
   };
 
-  // onChange -> event($.itens.*)
-
   const onChangeBaseFieldName = (i: number) => (e: any) => {
     onChange({
       ...query,
       fields: fields.map((field, n) => (i === n ? { ...fields[i], baseFieldName: e.target.value } : field)),
     });
+    onRunQuery();
+  };
+
+  const onChangeChildFieldNames = (i: number) => (e: any) => {
+    console.log('Event value: ', e);
+    onChange({
+      ...query,
+      fields: fields.map((field, n) => (i === n ? { ...fields[i], childFieldNames: e } : field)),
+    });
+
+    onRunQuery();
   };
 
   const onChangeType = (i: number) => (e: SelectableValue<string>) => {
@@ -101,7 +108,7 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
         ...query,
         fields: [
           ...fields.slice(0, i + 1),
-          { name: '', jsonPath: '', baseField: '', baseFieldName: '' },
+          { name: '', jsonPath: '', baseField: '', baseFieldName: '', childFieldNames: '' },
           ...fields.slice(i + 1),
         ],
       });
@@ -122,8 +129,23 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
       content: fields
         ? fields.map((field, index) => (
             <InlineFieldRow key={index}>
+              <InlineField label="Child Field Path" grow>
+                <JsonPathQueryField
+                  onBlur={onRunQuery}
+                  onChange={onChangePath(index)}
+                  query={field.jsonPath}
+                  onData={() => datasource.metadataRequest(query, range)}
+                />
+              </InlineField>
+              <InlineField grow>
+                <Input
+                  placeholder="Base Field Name"
+                  value={field.baseFieldName}
+                  onChange={onChangeBaseFieldName(index)}
+                />
+              </InlineField>
               <InlineField
-                label="Child Fields"
+                label="Child Field Path"
                 tooltip={
                   <div>
                     A <a href="https://goessner.net/articles/JsonPath/">JSON Path</a> query that selects one or more
@@ -134,18 +156,9 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
               >
                 <JsonPathQueryField
                   onBlur={onRunQuery}
-                  onChange={onChangePath(index)}
-                  query={field.jsonPath}
+                  onChange={onChangeChildFieldNames(index)}
+                  query={field.childFieldNames}
                   onData={() => datasource.metadataRequest(query, range)}
-                />
-              </InlineField>
-              <InlineField label="Base Field Name" grow>
-                <FormField
-                  width={4}
-                  value={field.baseFieldName}
-                  onChange={onChangeBaseFieldName(index)}
-                  label="Base Field Name"
-                  type="string"
                 />
               </InlineField>
 

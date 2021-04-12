@@ -3,6 +3,9 @@ import { DataQuery, DataSourceJsonData, FieldType } from '@grafana/data';
 interface JsonField {
   name?: string;
   jsonPath: string;
+  baseField: string;
+  baseFieldName: string;
+  childFieldNames: string;
   type?: FieldType;
 }
 
@@ -20,6 +23,8 @@ export interface JsonApiQuery extends DataQuery {
 
   // Keep for backwards compatibility with older version of variables query editor.
   jsonPath?: string;
+  baseField?: string;
+  baseFieldName?: string;
 }
 
 export const defaultQuery: Partial<JsonApiQuery> = {

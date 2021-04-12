@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { isValid, parseISO } from 'date-fns';
-import { JSONPath } from 'jsonpath-plus';
 
 import {
   DataQueryRequest,
@@ -17,6 +16,7 @@ import { getTemplateSrv } from '@grafana/runtime';
 
 import API from './api';
 import { JsonApiQuery, JsonApiDataSourceOptions, Pair } from './types';
+import { JSONPath } from 'jsonpath-plus';
 
 export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourceOptions> {
   api: API;
@@ -54,7 +54,7 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
    */
   async metricFindQuery?(query: JsonApiQuery): Promise<MetricFindValue[]> {
     const frame = await this.doRequest(query);
-    return frame.fields[0].values.toArray().map((_) => ({ text: _ }));
+    return frame.fields[0].values.toArray().map((_: any) => ({ text: _ }));
   }
 
   /**
@@ -104,67 +104,48 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
   }
 
   async doRequest(query: JsonApiQuery, range?: TimeRange, scopedVars?: ScopedVars) {
+    console.log('Inside do request.....');
     const replaceWithVars = replace(scopedVars, range);
-    let baseField: any[] = [];
+    let columns: any[] = [];
+    console.log('Qyery fields,', query.fields);
+    const baseFieldName = query.fields[0].baseFieldName;
+    // let childFieldNames: string[] = [];
+    columns.push(baseFieldName);
+    console.log('Base Field Name: ', baseFieldName);
 
     const json = await this.requestJson(query, replaceWithVars);
 
     if (!json) {
       throw new Error('Query returned empty data');
     }
-    // let baseFieldName = '';
-    let fields = query.fields
-      .filter((field) => field.jsonPath)
-      .map((field) => {
-        console.log('Base Field Name: ', field.baseFieldName);
-        // baseFieldName = field.baseFieldName;
-        const path = replaceWithVars(field.jsonPath);
-        const basePath = replaceWithVars(field.baseField);
-        console.log('Path is: ', path);
-        console.log('JSON is: ', json);
-        const values = JSONPath({ path, json });
-        baseField = JSONPath({ path: basePath, json });
-        console.log('Base field ......, ', baseField);
+    let fields = query.fields.map((field) => {
+      console.log('Base Field Name: ', field.baseFieldName);
+      console.log('Child Field Names: ', field.childFieldNames);
+      // baseFieldName = field.baseFieldName;
+      const childColumns = replaceWithVars(field.childFieldNames);
+      let childColumnVal = JSONPath({ path: childColumns, json });
+      console.log('Child column vals, ', childColumnVal);
+      childColumnVal.forEach((elem: any) => columns.push(elem));
+      // Get the path for automatic setting of the field name.
+      //
+      // Casted to any due to typing issues with JSONPath-Plus
+      // const paths = (JSONPath as any).toPathArray(path);
 
-        console.log('Values after jsonPath is: ', values);
-        // Get the path for automatic setting of the field name.
-        //
-        // Casted to any due to typing issues with JSONPath-Plus
-        // const paths = (JSONPath as any).toPathArray(path);
+      // const propertyType = field.type ? field.type : detectFieldType(values);
+      // const typedValues = parseValues(values, propertyType);
 
-        // const propertyType = field.type ? field.type : detectFieldType(values);
-        // const typedValues = parseValues(values, propertyType);
+      return childColumnVal;
+    });
 
-        return values;
-      });
+    console.log('Fields', fields);
+    // buckets.forEach((bucket: { key: any }) => {
+    //   columns.push(bucket.key);
+    // });
 
-    console.log('Fields is: ', fields[0]);
-    let newFields = fields[0];
-    newFields = [...new Set(newFields)];
-
-    console.log('Distinct', newFields);
-
-    // const fieldLengths = fields.map((field) => field.values.length);
-    // const uniqueFieldLengths = Array.from(new Set(fieldLengths)).length;
-
-    // // All fields need to have the same length for the data frame to be valid.
-    // if (uniqueFieldLengths > 1) {
-    //   throw new Error('Fields have different lengths');
-    // }
     const frame = new MutableDataFrame({
       refId: query.refId,
-      fields: newFields.map((element: any) => {
-        return { name: element, type: FieldType.string };
-      }),
+      fields: columns.map((column) => ({ name: column, type: FieldType.string })),
     });
-
-    baseField.forEach((bf) => {
-      let frameResult = [bf];
-      newFields.forEach((cf: any) => frameResult.push(String(cf)));
-      frame.appendRow(frameResult);
-    });
-
-    console.log('Frame fields: ', frame.fields);
 
     return frame;
   }

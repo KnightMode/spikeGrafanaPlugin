@@ -1,0 +1,100 @@
+{
+    "fieldConfig": {
+      "defaults": {
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            {
+              "color": "green",
+              "value": null
+            },
+            {
+              "color": "red",
+              "value": 232
+            }
+          ]
+        },
+        "mappings": [],
+        "color": {
+          "mode": "thresholds"
+        }
+      },
+      "overrides": []
+    },
+    "gridPos": {
+      "h": 12,
+      "w": 13,
+      "x": 0,
+      "y": 0
+    },
+    "id": 23763571993,
+    "options": {
+      "reduceOptions": {
+        "values": false,
+        "calcs": [],
+        "fields": "/.*/"
+      },
+      "orientation": "auto",
+      "text": {},
+      "textMode": "auto",
+      "colorMode": "background",
+      "graphMode": "area",
+      "justifyMode": "auto"
+    },
+    "pluginVersion": "7.5.1",
+    "targets": [
+      {
+        "cacheDurationSeconds": 300,
+        "fields": [
+          {
+            "baseField": "$.aggregations.response_category_url.buckets[0].key",
+            "baseFieldName": "ServiceName",
+            "childFieldNames": "$.aggregations.response_category_url.buckets[0].response_category.buckets[*].key",
+            "childFieldValues": "$.aggregations.response_category_url.buckets[0].response_category.buckets[*].doc_count",
+            "jsonPath": "",
+            "name": ""
+          }
+        ],
+        "method": "GET",
+        "queryParams": "",
+        "refId": "A",
+        "urlPath": ""
+      },
+      {
+        "cacheDurationSeconds": 300,
+        "fields": [
+          {
+            "baseField": "$.aggregations.response_category_url.buckets[1].key",
+            "baseFieldName": "ServiceName",
+            "childFieldNames": "$.aggregations.response_category_url.buckets[0].response_category.buckets[*].key",
+            "childFieldValues": "$.aggregations.response_category_url.buckets[1].response_category.buckets[*].doc_count",
+            "jsonPath": "",
+            "name": ""
+          }
+        ],
+        "hide": false,
+        "method": "GET",
+        "queryParams": "",
+        "refId": "B",
+        "urlPath": ""
+      }
+    ],
+    "title": "Service Health Summary Dashboard",
+    "transformations": [
+      {
+        "id": "organize",
+        "options": {
+          "excludeByName": {},
+          "indexByName": {},
+          "renameByName": {
+            "Error": "Technical Error(400)",
+            "Error1": "Business Error(500)",
+            "ServiceName": "Service",
+            "Success": "Success(201)"
+          }
+        }
+      }
+    ],
+    "type": "stat",
+    "datasource": null
+  }

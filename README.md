@@ -27,6 +27,6 @@
    ```
 4. Volume mount the plugin directory into the grafana plugins folder in the container:
 
-   ```docker run -d -p 3001:3000 -v <plugin-directory>:/var/lib/grafana/plugins grafana/grafana```
+   ```docker run -d -p 3000:3000 -v <plugin-directory>:/var/lib/grafana/plugins grafana/grafana```
 
 5. For running the plugin post any changes run ```yarn dev && docker restart <containerid/containername>```

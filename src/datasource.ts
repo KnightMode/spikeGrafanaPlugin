@@ -40,11 +40,11 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
 
   async query(request: DataQueryRequest<JsonApiQuery>): Promise<DataQueryResponse> {
     const promises = request.targets
-      .filter((query) => !query.hide)
-      .map((query) => this.doRequest(query, request.range, request.scopedVars));
+      .filter(query => !query.hide)
+      .map(query => this.doRequest(query, request.range, request.scopedVars));
 
     // Wait for all queries to finish before returning the result.
-    return Promise.all(promises).then((data) => ({ data }));
+    return Promise.all(promises).then(data => ({ data }));
   }
 
   /**
@@ -107,9 +107,11 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     console.log('Inside do request.....');
     const replaceWithVars = replace(scopedVars, range);
     let columns: any[] = [];
-    console.log('Qyery fields,', query.fields);
+    console.log('Query fields,', query.fields);
     const baseFieldName = query.fields[0].baseFieldName;
-    // let childFieldNames: string[] = [];
+    let baseFieldValues: any[] = [];
+    let childFieldValues: any[] = [];
+    let chunkedVals: any[] = [];
     columns.push(baseFieldName);
     console.log('Base Field Name: ', baseFieldName);
 
@@ -118,14 +120,21 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     if (!json) {
       throw new Error('Query returned empty data');
     }
-    let fields = query.fields.map((field) => {
+    let fields = query.fields.map(field => {
       console.log('Base Field Name: ', field.baseFieldName);
+      console.log('Base Field JSON Path: ', field.baseField);
       console.log('Child Field Names: ', field.childFieldNames);
       // baseFieldName = field.baseFieldName;
       const childColumns = replaceWithVars(field.childFieldNames);
       let childColumnVal = JSONPath({ path: childColumns, json });
+      baseFieldValues = JSONPath({ path: field.baseField, json });
+      childFieldValues = JSONPath({ path: field.childFieldValues, json });
       console.log('Child column vals, ', childColumnVal);
+      console.log('Base Field vals, ', baseFieldValues);
+      console.log('Child Field vals, ', childFieldValues);
       childColumnVal.forEach((elem: any) => columns.push(elem));
+      chunkedVals = _.chunk(childFieldValues, columns.length - 1);
+      console.log('Chunked vals', chunkedVals);
       // Get the path for automatic setting of the field name.
       //
       // Casted to any due to typing issues with JSONPath-Plus
@@ -138,13 +147,21 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     });
 
     console.log('Fields', fields);
-    // buckets.forEach((bucket: { key: any }) => {
-    //   columns.push(bucket.key);
-    // });
 
     const frame = new MutableDataFrame({
       refId: query.refId,
-      fields: columns.map((column) => ({ name: column, type: FieldType.string })),
+      fields: columns.map(column => ({ name: column, type: FieldType.string })),
+    });
+
+    baseFieldValues.forEach((elem, index) => {
+      console.log('Index in loop is: ', index);
+      let frameResult = [];
+      frameResult.push(elem);
+      let currentChunk = chunkedVals[index];
+      currentChunk.forEach((element: any) => {
+        frameResult.push(element);
+      });
+      frame.appendRow(frameResult);
     });
 
     return frame;
@@ -184,20 +201,20 @@ const replaceMacros = (str: string, range?: TimeRange) => {
  */
 export const detectFieldType = (values: any[]): FieldType => {
   // If all values are null, default to strings.
-  if (values.every((_) => _ === null)) {
+  if (values.every(_ => _ === null)) {
     return FieldType.string;
   }
 
   // If all values are valid ISO 8601, then assume that it's a time field.
   const isValidISO = values
-    .filter((value) => value !== null)
-    .every((value) => value.length >= 10 && isValid(parseISO(value)));
+    .filter(value => value !== null)
+    .every(value => value.length >= 10 && isValid(parseISO(value)));
   if (isValidISO) {
     return FieldType.time;
   }
 
-  if (values.every((value) => typeof value === 'number')) {
-    const uniqueLengths = Array.from(new Set(values.map((value) => Math.round(value).toString().length)));
+  if (values.every(value => typeof value === 'number')) {
+    const uniqueLengths = Array.from(new Set(values.map(value => Math.round(value).toString().length)));
     const hasSameLength = uniqueLengths.length === 1;
 
     // If all the values have the same length of either 10 (seconds) or 13
@@ -215,7 +232,7 @@ export const detectFieldType = (values: any[]): FieldType => {
     return FieldType.number;
   }
 
-  if (values.every((value) => typeof value === 'boolean')) {
+  if (values.every(value => typeof value === 'boolean')) {
     return FieldType.boolean;
   }
 
@@ -231,16 +248,16 @@ export const parseValues = (values: any[], type: FieldType): any[] => {
       // For time field, values are expected to be numbers representing a Unix
       // epoch in milliseconds.
 
-      if (values.filter((_) => _).every((value) => typeof value === 'string')) {
-        return values.map((_) => (_ !== null ? parseISO(_).valueOf() : _));
+      if (values.filter(_ => _).every(value => typeof value === 'string')) {
+        return values.map(_ => (_ !== null ? parseISO(_).valueOf() : _));
       }
 
-      if (values.filter((_) => _).every((value) => typeof value === 'number')) {
+      if (values.filter(_ => _).every(value => typeof value === 'number')) {
         const ms = 1_000_000_000_000;
 
         // If there are no "big" numbers, assume seconds.
-        if (values.filter((_) => _).every((_) => _ < ms)) {
-          return values.map((_) => (_ !== null ? _ * 1000.0 : _));
+        if (values.filter(_ => _).every(_ => _ < ms)) {
+          return values.map(_ => (_ !== null ? _ * 1000.0 : _));
         }
 
         // ... otherwise assume milliseconds.
@@ -249,13 +266,13 @@ export const parseValues = (values: any[], type: FieldType): any[] => {
 
       throw new Error('Unsupported time property');
     case FieldType.string:
-      return values.every((_) => typeof _ === 'string') ? values : values.map((_) => (_ !== null ? _.toString() : _));
+      return values.every(_ => typeof _ === 'string') ? values : values.map(_ => (_ !== null ? _.toString() : _));
     case FieldType.number:
-      return values.every((_) => typeof _ === 'number') ? values : values.map((_) => (_ !== null ? parseFloat(_) : _));
+      return values.every(_ => typeof _ === 'number') ? values : values.map(_ => (_ !== null ? parseFloat(_) : _));
     case FieldType.boolean:
-      return values.every((_) => typeof _ === 'boolean')
+      return values.every(_ => typeof _ === 'boolean')
         ? values
-        : values.map((_) => {
+        : values.map(_ => {
             if (_ === null) {
               return _;
             }

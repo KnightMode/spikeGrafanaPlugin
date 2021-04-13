@@ -2,7 +2,7 @@ import { DataQuery, DataSourceJsonData, FieldType } from '@grafana/data';
 
 interface JsonField {
   name?: string;
-  jsonPath: string;
+  childFieldValues: string;
   baseField: string;
   baseFieldName: string;
   childFieldNames: string;

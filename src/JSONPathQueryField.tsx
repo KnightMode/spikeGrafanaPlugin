@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { QueryField, SlatePrism, BracesPlugin } from '@grafana/ui';
+import { QueryField, SlatePrism, BracesPlugin, TypeaheadInput } from '@grafana/ui';
+import { onSuggest } from 'suggestions';
 
 interface Props {
   query: string;
@@ -27,12 +28,14 @@ export const JsonPathQueryField: React.FC<Props> = ({ query, onBlur, onChange, o
   // This is important if you don't want punctuation to interfere with your suggestions.
   const cleanText = (s: string) => s.replace(/[{}[\]="(),!~+\-*/^%\|\$@\.]/g, '').trim();
 
+  const onTypeahead = (input: TypeaheadInput) => onSuggest(input, onData);
 
   return (
     <QueryField
       additionalPlugins={plugins}
       query={query}
       cleanText={cleanText}
+      onTypeahead={onTypeahead}
       onRunQuery={onBlur}
       onChange={onChange}
       portalOrigin="jsonapi"

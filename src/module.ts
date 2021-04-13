@@ -1,9 +1,9 @@
 import { DataSourcePlugin } from '@grafana/data';
-import { DataSource } from './datasource';
+import { JsonDataSource } from './datasource';
 import { ConfigEditor } from './ConfigEditor';
 import { QueryEditor } from './QueryEditor';
-import { MyQuery, JsonApiDataSourceOptions } from './types';
+import { JsonApiQuery, JsonApiDataSourceOptions } from './types';
 
-export const plugin = new DataSourcePlugin<DataSource, MyQuery, JsonApiDataSourceOptions>(DataSource)
+export const plugin = new DataSourcePlugin<JsonDataSource, JsonApiQuery, JsonApiDataSourceOptions>(JsonDataSource)
   .setConfigEditor(ConfigEditor)
   .setQueryEditor(QueryEditor);

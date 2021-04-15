@@ -64,10 +64,11 @@ export default class Api {
     path: string,
     params: Array<Pair<string, string>>,
     headers?: Array<Pair<string, string>>,
-    body?: string
+    body?: string,
+    refId?: string
   ) {
-    if (!cacheDurationSeconds) {
-      return await this.get(method, path, params, headers, body);
+    if (refId !== 'B') {
+      await this.get(method, path, params, headers, body);
     }
 
     const rawUrl = this.baseUrl + path;

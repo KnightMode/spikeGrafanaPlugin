@@ -20,6 +20,7 @@ import { JSONPath } from 'jsonpath-plus';
 
 export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourceOptions> {
   api: API;
+  json: any;
 
   constructor(instanceSettings: DataSourceInstanceSettings<JsonApiDataSourceOptions>) {
     super(instanceSettings);
@@ -104,37 +105,48 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
   }
 
   async doRequest(query: JsonApiQuery, range?: TimeRange, scopedVars?: ScopedVars) {
-    console.log('Inside do request.....');
+    console.log('Running query for : ', query.refId);
+    // console.log('Inside do request.....');
     const replaceWithVars = replace(scopedVars, range);
     let columns: any[] = [];
-    console.log('Query fields,', query.fields);
+    // console.log('Query fields,', query.fields);
     const baseFieldName = query.fields[0].baseFieldName;
     let baseFieldValues: any[] = [];
     let childFieldValues: any[] = [];
     let chunkedVals: any[] = [];
     columns.push(baseFieldName);
-    console.log('Base Field Name: ', baseFieldName);
+    // console.log('Base Field Name: ', baseFieldName);
+    if (query.refId === 'A') {
+      this.json = null;
+    }
+    if (query.refId === 'B') {
+      console.log('Json:', this.json);
+    }
+    if (!this.json) {
+      console.log('json is null, ,making api call....');
+      this.json = await this.requestJson(query, replaceWithVars);
+    }
+    console.log('json is not null, no api call....');
 
-    const json = await this.requestJson(query, replaceWithVars);
-
-    if (!json) {
+    if (!this.json) {
       throw new Error('Query returned empty data');
     }
+
     let fields = query.fields.map(field => {
-      console.log('Base Field Name: ', field.baseFieldName);
-      console.log('Base Field JSON Path: ', field.baseField);
-      console.log('Child Field Names: ', field.childFieldNames);
+      // console.log('Base Field Name: ', field.baseFieldName);
+      // console.log('Base Field JSON Path: ', field.baseField);
+      // console.log('Child Field Names: ', field.childFieldNames);
       // baseFieldName = field.baseFieldName;
       const childColumns = replaceWithVars(field.childFieldNames);
-      let childColumnVal = JSONPath({ path: childColumns, json });
-      baseFieldValues = JSONPath({ path: field.baseField, json });
-      childFieldValues = JSONPath({ path: field.childFieldValues, json });
-      console.log('Child column vals, ', childColumnVal);
-      console.log('Base Field vals, ', baseFieldValues);
-      console.log('Child Field vals, ', childFieldValues);
+      let childColumnVal = JSONPath({ path: childColumns, json: this.json });
+      baseFieldValues = JSONPath({ path: field.baseField, json: this.json });
+      childFieldValues = JSONPath({ path: field.childFieldValues, json: this.json });
+      // console.log('Child column vals, ', childColumnVal);
+      // console.log('Base Field vals, ', baseFieldValues);
+      // console.log('Child Field vals, ', childFieldValues);
       childColumnVal.forEach((elem: any) => columns.push(elem));
       chunkedVals = _.chunk(childFieldValues, columns.length - 1);
-      console.log('Chunked vals', chunkedVals);
+      // console.log('Chunked vals', chunkedVals);
       // Get the path for automatic setting of the field name.
       //
       // Casted to any due to typing issues with JSONPath-Plus
@@ -172,13 +184,17 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
       return [interpolate(key), interpolate(value)];
     };
 
+    console.log('Method is: ', query.method);
+    console.log('UrlPath is: ', query.urlPath);
+
     return await this.api.cachedGet(
       query.cacheDurationSeconds,
       query.method,
       interpolate(query.urlPath),
       (query.params ?? []).map(interpolateKeyValue),
       (query.headers ?? []).map(interpolateKeyValue),
-      interpolate(query.body)
+      interpolate(query.body),
+      query.refId
     );
   }
 }

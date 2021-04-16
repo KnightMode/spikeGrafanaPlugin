@@ -13,6 +13,7 @@ export type Pair<T, K> = [T, K];
 
 export interface JsonApiQuery extends DataQuery {
   fields: JsonField[];
+  dashboardName: string;
   method: string;
   urlPath: string;
   queryParams: string;
@@ -21,10 +22,10 @@ export interface JsonApiQuery extends DataQuery {
   body: string;
   cacheDurationSeconds: number;
 
-  // Keep for backwards compatibility with older version of variables query editor.
-  jsonPath?: string;
-  baseField?: string;
-  baseFieldName?: string;
+  // // Keep for backwards compatibility with older version of variables query editor.
+  // jsonPath?: string;
+  // baseField?: string;
+  // baseFieldName?: string;
 }
 
 export const defaultQuery: Partial<JsonApiQuery> = {

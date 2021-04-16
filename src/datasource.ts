@@ -17,6 +17,7 @@ import { getTemplateSrv } from '@grafana/runtime';
 import API from './api';
 import { JsonApiQuery, JsonApiDataSourceOptions, Pair } from './types';
 import { JSONPath } from 'jsonpath-plus';
+import DashboardInputs from './dashboard_inputs';
 
 export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourceOptions> {
   api: API;
@@ -106,59 +107,38 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
 
   async doRequest(query: JsonApiQuery, range?: TimeRange, scopedVars?: ScopedVars) {
     console.log('Running query for : ', query.refId);
+    console.log('Dashboard Name : ', query.dashboardName);
+    const selectedDashboard = DashboardInputs[query.dashboardName];
+
     // console.log('Inside do request.....');
     const replaceWithVars = replace(scopedVars, range);
     let columns: any[] = [];
-    // console.log('Query fields,', query.fields);
-    const baseFieldName = query.fields[0].baseFieldName;
+    console.log('Query fields,', query.fields);
+    const baseFieldName = selectedDashboard.fields[0].baseFieldName;
     let baseFieldValues: any[] = [];
     let childFieldValues: any[] = [];
     let chunkedVals: any[] = [];
     columns.push(baseFieldName);
-    // console.log('Base Field Name: ', baseFieldName);
-    if (query.refId === 'A') {
-      this.json = null;
-    }
-    if (query.refId === 'B') {
-      console.log('Json:', this.json);
-    }
-    if (!this.json) {
-      console.log('json is null, ,making api call....');
-      this.json = await this.requestJson(query, replaceWithVars);
-    }
-    console.log('json is not null, no api call....');
+    console.log('Base Field Name: ', baseFieldName);
+    query = { ...query, body: selectedDashboard.requestBody };
+    this.json = await this.requestJson(query, replaceWithVars);
 
     if (!this.json) {
       throw new Error('Query returned empty data');
     }
 
-    let fields = query.fields.map(field => {
-      // console.log('Base Field Name: ', field.baseFieldName);
-      // console.log('Base Field JSON Path: ', field.baseField);
-      // console.log('Child Field Names: ', field.childFieldNames);
-      // baseFieldName = field.baseFieldName;
-      const childColumns = replaceWithVars(field.childFieldNames);
-      let childColumnVal = JSONPath({ path: childColumns, json: this.json });
-      baseFieldValues = JSONPath({ path: field.baseField, json: this.json });
-      childFieldValues = JSONPath({ path: field.childFieldValues, json: this.json });
-      // console.log('Child column vals, ', childColumnVal);
-      // console.log('Base Field vals, ', baseFieldValues);
-      // console.log('Child Field vals, ', childFieldValues);
-      childColumnVal.forEach((elem: any) => columns.push(elem));
-      chunkedVals = _.chunk(childFieldValues, columns.length - 1);
-      // console.log('Chunked vals', chunkedVals);
-      // Get the path for automatic setting of the field name.
-      //
-      // Casted to any due to typing issues with JSONPath-Plus
-      // const paths = (JSONPath as any).toPathArray(path);
-
-      // const propertyType = field.type ? field.type : detectFieldType(values);
-      // const typedValues = parseValues(values, propertyType);
-
-      return childColumnVal;
-    });
-
-    console.log('Fields', fields);
+    console.log('Child Filed Values: ', selectedDashboard.fields[0].childFieldValues);
+    console.log('Base Field JSON Path: ', selectedDashboard.fields[0].baseField);
+    console.log('Child Field Names: ', selectedDashboard.fields[0].childFieldNames);
+    // baseFieldName = field.baseFieldName;
+    let childColumnVal = JSONPath({ path: selectedDashboard.fields[0].childFieldNames, json: this.json });
+    baseFieldValues = JSONPath({ path: selectedDashboard.fields[0].baseField, json: this.json });
+    childFieldValues = JSONPath({ path: selectedDashboard.fields[0].childFieldValues, json: this.json });
+    console.log('Child column vals, ', childColumnVal);
+    console.log('Base Field vals, ', baseFieldValues);
+    console.log('Child Field vals, ', childFieldValues);
+    childColumnVal.forEach((elem: any) => columns.push(elem));
+    chunkedVals = _.chunk(childFieldValues, columns.length - 1);
 
     const frame = new MutableDataFrame({
       refId: query.refId,
@@ -166,7 +146,6 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     });
 
     baseFieldValues.forEach((elem, index) => {
-      console.log('Index in loop is: ', index);
       let frameResult = [];
       frameResult.push(elem);
       let currentChunk = chunkedVals[index];
@@ -188,7 +167,7 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     console.log('UrlPath is: ', query.urlPath);
 
     return await this.api.cachedGet(
-      query.cacheDurationSeconds,
+      5,
       query.method,
       interpolate(query.urlPath),
       (query.params ?? []).map(interpolateKeyValue),

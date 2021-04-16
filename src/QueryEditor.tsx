@@ -14,11 +14,12 @@ import {
 } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { JsonApiQuery, defaultQuery, JsonApiDataSourceOptions, Pair } from './types';
-import { JsonPathQueryField } from './JSONPathQueryField';
+// import { JsonPathQueryField } from './JSONPathQueryField';
 import { KeyValueEditor } from './KeyValueEditor';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { css } from 'emotion';
 import { JsonDataSource } from 'datasource';
+import DashboardInputs from 'dashboard_inputs';
 
 interface Props extends QueryEditorProps<JsonDataSource, JsonApiQuery, JsonApiDataSourceOptions> {
   limitFields?: number;
@@ -26,7 +27,9 @@ interface Props extends QueryEditorProps<JsonDataSource, JsonApiQuery, JsonApiDa
 export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limitFields, datasource, range }) => {
   const [bodyType, setBodyType] = useState('plaintext');
   const [tabIndex, setTabIndex] = useState(0);
+  const [dashboardName, setDashboardName] = useState('');
   const theme = useTheme();
+  // const [body, setBody] = useState();
 
   const { fields } = defaults(query, { ...defaultQuery, fields: [{ name: '', jsonPath: '' }] }) as JsonApiQuery;
 
@@ -44,7 +47,7 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
 
   const onMethodChange = (method: string) => {
     onChange({ ...query, method });
-    onRunQuery();
+    // onRunQuery();
   };
 
   const onBodyChange = (body: string) => {
@@ -59,48 +62,6 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
   const onHeadersChange = (headers: Array<Pair<string, string>>) => {
     onChange({ ...query, headers });
   };
-
-  const onChangePath = (i: number) => (e: string) => {
-    onChange({
-      ...query,
-      fields: fields.map((field, n) => (i === n ? { ...fields[i], childFieldValues: e } : field)),
-    });
-  };
-
-  const onChangeBaseField = (i: number) => (e: string) => {
-    onChange({
-      ...query,
-      fields: fields.map((field, n) => (i === n ? { ...fields[i], baseField: e } : field)),
-    });
-  };
-
-  const onChangeBaseFieldName = (i: number) => (e: any) => {
-    onChange({
-      ...query,
-      fields: fields.map((field, n) => (i === n ? { ...fields[i], baseFieldName: e.target.value } : field)),
-    });
-    onRunQuery();
-  };
-
-  const onChangeChildFieldNames = (i: number) => (e: any) => {
-    console.log('Event value: ', e);
-    onChange({
-      ...query,
-      fields: fields.map((field, n) => (i === n ? { ...fields[i], childFieldNames: e } : field)),
-    });
-
-    onRunQuery();
-  };
-
-  // const onChangeType = (i: number) => (e: SelectableValue<string>) => {
-  //   onChange({
-  //     ...query,
-  //     fields: fields.map((field, n) =>
-  //       i === n ? { ...fields[i], type: (e.value === 'auto' ? undefined : e.value) as FieldType } : field
-  //     ),
-  //   });
-  //   onRunQuery();
-  // };
 
   const addField = (i: number) => () => {
     if (!limitFields || fields.length < limitFields) {
@@ -123,62 +84,28 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
     onRunQuery();
   };
 
+  const onHandleDashboardChange = (dashboardName: any) => {
+    setDashboardName(dashboardName);
+    onChange({
+      ...query,
+      dashboardName,
+    });
+    onRunQuery();
+  };
+
   const tabs = [
     {
       title: 'Fields',
       content: fields
-        ? fields.map((field, index) => (
+        ? fields.map((_field, index) => (
             <InlineFieldRow key={index}>
-              <InlineField label="Child Field Value to Pick" grow>
-                <JsonPathQueryField
-                  onBlur={onRunQuery}
-                  onChange={onChangePath(index)}
-                  query={field.childFieldValues}
-                  onData={() => datasource.metadataRequest(query, range)}
-                />
-              </InlineField>
-              <InlineField grow>
-                <Input
-                  placeholder="Base Field Name"
-                  value={field.baseFieldName}
-                  onChange={onChangeBaseFieldName(index)}
-                />
-              </InlineField>
-              <InlineField
-                label="Child Field Path"
-                tooltip={
-                  <div>
-                    A <a href="https://goessner.net/articles/JsonPath/">JSON Path</a> query that selects one or more
-                    values from a JSON object.
-                  </div>
-                }
-                grow
-              >
-                <JsonPathQueryField
-                  onBlur={onRunQuery}
-                  onChange={onChangeChildFieldNames(index)}
-                  query={field.childFieldNames}
-                  onData={() => datasource.metadataRequest(query, range)}
-                />
-              </InlineField>
-
-              <InlineField
-                label="Base Fields"
-                tooltip={
-                  <div>
-                    A <a href="https://goessner.net/articles/JsonPath/">JSON Path</a> query that selects one or more
-                    values from a JSON object.
-                  </div>
-                }
-                grow
-              >
-                <JsonPathQueryField
-                  onBlur={onRunQuery}
-                  onChange={onChangeBaseField(index)}
-                  query={field.baseField}
-                  onData={() => datasource.metadataRequest(query, range)}
-                />
-              </InlineField>
+              <Select
+                value={query.dashboardName}
+                options={[{ label: 'Service Health Summary', value: 'svcHealthSummary' }]}
+                onChange={v => {
+                  onHandleDashboardChange(v.value);
+                }}
+              />
 
               {(!limitFields || fields.length < limitFields) && (
                 <a className="gf-form-label" onClick={addField(index)}>
@@ -269,11 +196,12 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
             >
               {({ width }) => (
                 <CodeEditor
-                  value={query.body || ''}
+                  value={DashboardInputs[dashboardName].requestBody || ''}
                   language={bodyType}
                   width={width}
                   height="200px"
                   showMiniMap={false}
+                  readOnly={true}
                   showLineNumbers={true}
                   onBlur={onBodyChange}
                 />

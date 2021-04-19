@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import { isValid, parseISO } from 'date-fns';
 
 import {
   DataQueryRequest,
@@ -61,11 +60,6 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
   }
 
   /**
-   * This line adds support for annotation queries in >=7.2.
-   */
-  annotations = {};
-
-  /**
    * Checks whether we can connect to the API.
    */
   async testDatasource() {
@@ -107,22 +101,14 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
   }
 
   async doRequest(query: JsonApiQuery, range?: TimeRange, scopedVars?: ScopedVars) {
-    console.log('Running query for : ', query.refId);
-    console.log('Dashboard Name : ', query.dashboardName);
     const selectedDashboard = DashboardInputs[query.dashboardName];
-
-    console.log('Time range From: ', range?.from.format('YYYY-MM-DD hh:mm:ss'));
-    console.log('Time range From: ', range?.to.format('YYYY-MM-DD hh:mm:ss'));
-
     const replaceWithVars = replace(scopedVars, range);
     let columns: any[] = [];
-    console.log('Query fields,', query.fields);
     const baseFieldName = selectedDashboard.fields[0].baseFieldName;
     let baseFieldValues: any[] = [];
     let childFieldValues: any[] = [];
     let chunkedVals: any[] = [];
     columns.push(baseFieldName);
-    console.log('Base Field Name: ', baseFieldName);
     query = { ...query, body: selectedDashboard.requestBody };
     const requestTimeRange: any = {
       timeRange: {
@@ -132,7 +118,6 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     };
 
     let output = render(selectedDashboard.requestBody, requestTimeRange);
-    console.log('Rendered output', JSON.parse(output));
     query = { ...query, body: JSON.parse(output) };
     this.json = await this.requestJson(query, replaceWithVars);
 
@@ -140,16 +125,9 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
       throw new Error('Query returned empty data');
     }
 
-    console.log('Child Filed Values: ', selectedDashboard.fields[0].childFieldValues);
-    console.log('Base Field JSON Path: ', selectedDashboard.fields[0].baseField);
-    console.log('Child Field Names: ', selectedDashboard.fields[0].childFieldNames);
-    // baseFieldName = field.baseFieldName;
     let childColumnVal = JSONPath({ path: selectedDashboard.fields[0].childFieldNames, json: this.json });
     baseFieldValues = JSONPath({ path: selectedDashboard.fields[0].baseField, json: this.json });
     childFieldValues = JSONPath({ path: selectedDashboard.fields[0].childFieldValues, json: this.json });
-    console.log('Child column vals, ', childColumnVal);
-    console.log('Base Field vals, ', baseFieldValues);
-    console.log('Child Field vals, ', childFieldValues);
     childColumnVal.forEach((elem: any) => columns.push(elem));
     chunkedVals = _.chunk(childFieldValues, columns.length - 1);
 
@@ -176,9 +154,6 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
       return [interpolate(key), interpolate(value)];
     };
 
-    console.log('Method is: ', query.method);
-    console.log('UrlPath is: ', query.urlPath);
-
     return await this.api.cachedGet(
       5,
       query.method,
@@ -202,107 +177,6 @@ const replaceMacros = (str: string, range?: TimeRange) => {
         .replace(/\$__unixEpochFrom\(\)/g, range.from.unix().toString())
         .replace(/\$__unixEpochTo\(\)/g, range.to.unix().toString())
     : str;
-};
-
-/**
- * Detects the field type from an array of values.
- */
-export const detectFieldType = (values: any[]): FieldType => {
-  // If all values are null, default to strings.
-  if (values.every(_ => _ === null)) {
-    return FieldType.string;
-  }
-
-  // If all values are valid ISO 8601, then assume that it's a time field.
-  const isValidISO = values
-    .filter(value => value !== null)
-    .every(value => value.length >= 10 && isValid(parseISO(value)));
-  if (isValidISO) {
-    return FieldType.time;
-  }
-
-  if (values.every(value => typeof value === 'number')) {
-    const uniqueLengths = Array.from(new Set(values.map(value => Math.round(value).toString().length)));
-    const hasSameLength = uniqueLengths.length === 1;
-
-    // If all the values have the same length of either 10 (seconds) or 13
-    // (milliseconds), assume it's a time field. This is not always true, so we
-    // might need to add an option to disable detection of time fields.
-    if (hasSameLength) {
-      if (uniqueLengths[0] === 13) {
-        return FieldType.time;
-      }
-      if (uniqueLengths[0] === 10) {
-        return FieldType.time;
-      }
-    }
-
-    return FieldType.number;
-  }
-
-  if (values.every(value => typeof value === 'boolean')) {
-    return FieldType.boolean;
-  }
-
-  return FieldType.string;
-};
-
-/**
- * parseValues converts values to the given field type.
- */
-export const parseValues = (values: any[], type: FieldType): any[] => {
-  switch (type) {
-    case FieldType.time:
-      // For time field, values are expected to be numbers representing a Unix
-      // epoch in milliseconds.
-
-      if (values.filter(_ => _).every(value => typeof value === 'string')) {
-        return values.map(_ => (_ !== null ? parseISO(_).valueOf() : _));
-      }
-
-      if (values.filter(_ => _).every(value => typeof value === 'number')) {
-        const ms = 1_000_000_000_000;
-
-        // If there are no "big" numbers, assume seconds.
-        if (values.filter(_ => _).every(_ => _ < ms)) {
-          return values.map(_ => (_ !== null ? _ * 1000.0 : _));
-        }
-
-        // ... otherwise assume milliseconds.
-        return values;
-      }
-
-      throw new Error('Unsupported time property');
-    case FieldType.string:
-      return values.every(_ => typeof _ === 'string') ? values : values.map(_ => (_ !== null ? _.toString() : _));
-    case FieldType.number:
-      return values.every(_ => typeof _ === 'number') ? values : values.map(_ => (_ !== null ? parseFloat(_) : _));
-    case FieldType.boolean:
-      return values.every(_ => typeof _ === 'boolean')
-        ? values
-        : values.map(_ => {
-            if (_ === null) {
-              return _;
-            }
-
-            switch (_.toString()) {
-              case '0':
-              case 'false':
-              case 'FALSE':
-              case 'False':
-                return false;
-              case '1':
-              case 'true':
-              case 'TRUE':
-              case 'True':
-                return true;
-              default:
-                throw new Error('Found non-boolean values in a field of type boolean: ' + _.toString());
-            }
-          });
-    default:
-      throw new Error('Unsupported field type');
-  }
 };
 
 function render(template: any, data: any) {

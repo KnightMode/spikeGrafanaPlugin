@@ -21,11 +21,6 @@ export interface JsonApiQuery extends DataQuery {
   headers: Array<Pair<string, string>>;
   body: string;
   cacheDurationSeconds: number;
-
-  // // Keep for backwards compatibility with older version of variables query editor.
-  // jsonPath?: string;
-  // baseField?: string;
-  // baseFieldName?: string;
 }
 
 export const defaultQuery: Partial<JsonApiQuery> = {

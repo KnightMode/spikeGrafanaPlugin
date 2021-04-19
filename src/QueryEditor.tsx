@@ -14,8 +14,6 @@ import {
 } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { JsonApiQuery, defaultQuery, JsonApiDataSourceOptions, Pair } from './types';
-// import { JsonPathQueryField } from './JSONPathQueryField';
-import { KeyValueEditor } from './KeyValueEditor';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { css } from 'emotion';
 import { JsonDataSource } from 'datasource';
@@ -29,7 +27,6 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
   const [tabIndex, setTabIndex] = useState(0);
   const [dashboardName, setDashboardName] = useState('');
   const theme = useTheme();
-  // const [body, setBody] = useState();
 
   const { fields } = defaults(query, { ...defaultQuery, fields: [{ name: '', jsonPath: '' }] }) as JsonApiQuery;
 
@@ -53,14 +50,6 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
   const onBodyChange = (body: string) => {
     onChange({ ...query, body });
     onRunQuery();
-  };
-
-  const onParamsChange = (params: Array<Pair<string, string>>) => {
-    onChange({ ...query, params });
-  };
-
-  const onHeadersChange = (headers: Array<Pair<string, string>>) => {
-    onChange({ ...query, headers });
   };
 
   const addField = (i: number) => () => {
@@ -147,30 +136,6 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
       ),
     },
     {
-      title: 'Params',
-      content: (
-        <KeyValueEditor
-          addRowLabel={'Add param'}
-          columns={['Key', 'Value']}
-          values={params ?? []}
-          onChange={onParamsChange}
-          onBlur={() => onRunQuery()}
-        />
-      ),
-    },
-    {
-      title: 'Headers',
-      content: (
-        <KeyValueEditor
-          addRowLabel={'Add header'}
-          columns={['Key', 'Value']}
-          values={query.headers ?? []}
-          onChange={onHeadersChange}
-          onBlur={() => onRunQuery()}
-        />
-      ),
-    },
-    {
       title: 'Body',
       content: (
         <>
@@ -187,30 +152,32 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
               />
             </InlineField>
           </InlineFieldRow>
-          <InlineFieldRow>
-            <AutoSizer
-              disableHeight
-              className={css`
-                margin-bottom: ${theme.spacing.sm};
-              `}
-            >
-              {({ width }) => (
-                <CodeEditor
-                  value={DashboardInputs[dashboardName].requestBody || ''}
-                  language={bodyType}
-                  width={width}
-                  height="200px"
-                  showMiniMap={false}
-                  readOnly={true}
-                  showLineNumbers={true}
-                  onBlur={onBodyChange}
-                />
-              )}
-            </AutoSizer>
-            {/* <InlineField label="Body" tooltip="foo" grow>
+          {dashboardName && (
+            <InlineFieldRow>
+              <AutoSizer
+                disableHeight
+                className={css`
+                  margin-bottom: ${theme.spacing.sm};
+                `}
+              >
+                {({ width }) => (
+                  <CodeEditor
+                    value={DashboardInputs[dashboardName].requestBody || ''}
+                    language={bodyType}
+                    width={width}
+                    height="200px"
+                    showMiniMap={false}
+                    readOnly={true}
+                    showLineNumbers={true}
+                    onBlur={onBodyChange}
+                  />
+                )}
+              </AutoSizer>
+              {/* <InlineField label="Body" tooltip="foo" grow>
           <JsonQueryField value={body || ''} onChange={} />
         </InlineField> */}
-          </InlineFieldRow>
+            </InlineFieldRow>
+          )}
         </>
       ),
     },

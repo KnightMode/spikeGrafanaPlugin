@@ -13,6 +13,7 @@ import {
   MutableDataFrame,
 } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
+import Mustache from 'mustache';
 
 import API from './api';
 import { JsonApiQuery, JsonApiDataSourceOptions, Pair } from './types';
@@ -110,7 +111,9 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     console.log('Dashboard Name : ', query.dashboardName);
     const selectedDashboard = DashboardInputs[query.dashboardName];
 
-    // console.log('Inside do request.....');
+    console.log('Time range From: ', range?.from.format('YYYY-MM-DD hh:mm:ss'));
+    console.log('Time range From: ', range?.to.format('YYYY-MM-DD hh:mm:ss'));
+
     const replaceWithVars = replace(scopedVars, range);
     let columns: any[] = [];
     console.log('Query fields,', query.fields);
@@ -121,6 +124,16 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     columns.push(baseFieldName);
     console.log('Base Field Name: ', baseFieldName);
     query = { ...query, body: selectedDashboard.requestBody };
+    const requestTimeRange: any = {
+      timeRange: {
+        from: range?.from.format('YYYY-MM-DD hh:mm:ss'),
+        to: range?.to.format('YYYY-MM-DD hh:mm:ss'),
+      },
+    };
+
+    let output = render(selectedDashboard.requestBody, requestTimeRange);
+    console.log('Rendered output', JSON.parse(output));
+    query = { ...query, body: JSON.parse(output) };
     this.json = await this.requestJson(query, replaceWithVars);
 
     if (!this.json) {
@@ -291,3 +304,7 @@ export const parseValues = (values: any[], type: FieldType): any[] => {
       throw new Error('Unsupported field type');
   }
 };
+
+function render(template: any, data: any) {
+  return Mustache.render(JSON.stringify(template), data);
+}

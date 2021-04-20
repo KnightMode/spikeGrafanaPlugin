@@ -1,7 +1,6 @@
 import defaults from 'lodash/defaults';
 import React, { useState } from 'react';
 import {
-  Icon,
   Field,
   Segment,
   Input,
@@ -51,27 +50,6 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
     onRunQuery();
   };
 
-  const addField = (i: number) => () => {
-    if (!limitFields || fields.length < limitFields) {
-      onChange({
-        ...query,
-        fields: [
-          ...fields.slice(0, i + 1),
-          { name: '', childFieldValues: '', baseField: '', baseFieldName: '', childFieldNames: '' },
-          ...fields.slice(i + 1),
-        ],
-      });
-    }
-  };
-
-  const removeField = (i: number) => () => {
-    onChange({
-      ...query,
-      fields: [...fields.slice(0, i), ...fields.slice(i + 1)],
-    });
-    onRunQuery();
-  };
-
   const onHandleDashboardChange = (dashboardName: any) => {
     setDashboardName(dashboardName);
     onChange({
@@ -94,18 +72,6 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
                   onHandleDashboardChange(v.value);
                 }}
               />
-
-              {(!limitFields || fields.length < limitFields) && (
-                <a className="gf-form-label" onClick={addField(index)}>
-                  <Icon name="plus" />
-                </a>
-              )}
-
-              {fields.length > 1 ? (
-                <a className="gf-form-label" onClick={removeField(index)}>
-                  <Icon name="minus" />
-                </a>
-              ) : null}
             </div>
           ))
         : null,

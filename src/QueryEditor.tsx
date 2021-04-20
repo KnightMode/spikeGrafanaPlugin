@@ -2,8 +2,7 @@ import defaults from 'lodash/defaults';
 import React, { useState } from 'react';
 import {
   Icon,
-  InlineFieldRow,
-  InlineField,
+  Field,
   Segment,
   Input,
   Select,
@@ -87,7 +86,7 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
       title: 'Fields',
       content: fields
         ? fields.map((_field, index) => (
-            <InlineFieldRow key={index}>
+            <div key={index}>
               <Select
                 value={query.dashboardName}
                 options={[{ label: 'Service Health Summary', value: 'svcHealthSummary' }]}
@@ -107,15 +106,15 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
                   <Icon name="minus" />
                 </a>
               ) : null}
-            </InlineFieldRow>
+            </div>
           ))
         : null,
     },
     {
       title: 'Path',
       content: (
-        <InlineFieldRow>
-          <InlineField>
+        <div>
+          <Field>
             <Select
               value={query.method}
               options={[
@@ -124,23 +123,23 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
               ]}
               onChange={v => onMethodChange(v.value ?? 'GET')}
             />
-          </InlineField>
-          <InlineField grow>
+          </Field>
+          <Field>
             <Input
               placeholder="/orders/${orderId}"
               value={query.urlPath}
               onChange={e => onChange({ ...query, urlPath: e.currentTarget.value })}
             />
-          </InlineField>
-        </InlineFieldRow>
+          </Field>
+        </div>
       ),
     },
     {
       title: 'Body',
       content: (
         <>
-          <InlineFieldRow>
-            <InlineField label="Syntax highlighting">
+          <div>
+            <Field label="Syntax highlighting">
               <RadioButtonGroup
                 value={bodyType}
                 onChange={v => setBodyType(v ?? 'plaintext')}
@@ -150,10 +149,10 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
                   { label: 'XML', value: 'xml' },
                 ]}
               />
-            </InlineField>
-          </InlineFieldRow>
+            </Field>
+          </div>
           {dashboardName && (
-            <InlineFieldRow>
+            <div>
               <AutoSizer
                 disableHeight
                 className={css`
@@ -176,7 +175,7 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
               {/* <InlineField label="Body" tooltip="foo" grow>
           <JsonQueryField value={body || ''} onChange={} />
         </InlineField> */}
-            </InlineFieldRow>
+            </div>
           )}
         </>
       ),
@@ -185,17 +184,16 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
 
   return (
     <>
-      <InlineFieldRow>
-        <InlineField>
+      <div>
+        <Field>
           <RadioButtonGroup
             onChange={e => setTabIndex(e ?? 0)}
             value={tabIndex}
             options={tabs.map((tab, idx) => ({ label: tab.title, value: idx }))}
           />
-        </InlineField>
-        <InlineField
+        </Field>
+        <Field
           label="Cache Time"
-          tooltip="Time in seconds that the response will be cached in Grafana after receiving it."
         >
           <Segment
             value={{ label: formatCacheTimeLabel(query.cacheDurationSeconds), value: query.cacheDurationSeconds }}
@@ -206,15 +204,15 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
             }))}
             onChange={({ value }) => onChange({ ...query, cacheDurationSeconds: value! })}
           />
-        </InlineField>
-      </InlineFieldRow>
+        </Field>
+      </div>
       {query.method === 'GET' && query.body && (
-        <InfoBox severity="warning">
+        <InfoBox>
           {"GET requests can't have a body. The body you've defined will be ignored."}
         </InfoBox>
       )}
       {(query.headers ?? []).map(([key, _]) => key.toLowerCase()).find(_ => sensitiveHeaders.includes(_)) && (
-        <InfoBox severity="warning">
+        <InfoBox>
           {
             "It looks like you're adding credentials in the header. Since queries are stored unencrypted, it's strongly recommended that you add any secrets to the data source config instead."
           }

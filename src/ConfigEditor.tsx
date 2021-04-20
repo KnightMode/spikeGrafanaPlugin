@@ -8,7 +8,6 @@ import {} from '@emotion/core';
 
 type Props = DataSourcePluginOptionsEditorProps<JsonApiDataSourceOptions>;
 export const ConfigEditor: React.FC<Props> = ({ options, onOptionsChange }) => {
-
   return (
     <>
       <DataSourceHttpSettings

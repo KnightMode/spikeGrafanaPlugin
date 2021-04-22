@@ -16,7 +16,8 @@
     "date-fns": "^2.16.1",
     "jsonpath-plus": "^4.0.0",
     "memory-cache": "^0.2.0",
-    "mustache": "^4.2.0"
+    "mustache": "^4.2.0",
+    "tslib": "^2.2.0"
   },
   "author": "test",
   "license": "Apache-2.0",

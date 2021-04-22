@@ -1,15 +1,15 @@
 const DashboardInputs: any = {
-  svcHealthSummary: {
-    name: 'Svc Health Summary',
-    fields: [
-      {
-        baseField: '$.aggregations.response_category_url.buckets[*].key',
-        baseFieldName: 'ServiceName',
-        childFieldNames: '$.aggregations.response_category_url.buckets[0].response_category.buckets[*].key',
-        childFieldValues: '$.aggregations.response_category_url.buckets[*].response_category.buckets[*].doc_count',
-      },
-    ],
-    requestBody: `{
+    svcHealthSummary: {
+        name: 'Svc Health Summary',
+        fields: [
+            {
+                baseField: '$.aggregations.response_category_url.buckets[*].key',
+                baseFieldName: 'ServiceName',
+                childFieldNames: '$.aggregations.response_category_url.buckets[0].response_category.buckets[*].key',
+                childFieldValues: '$.aggregations.response_category_url.buckets[*].response_category.buckets[*].doc_count',
+            },
+        ],
+        requestBody: `{
         "size": 0,
         "query": {
             "bool": {
@@ -72,7 +72,8 @@ const DashboardInputs: any = {
             }
         }
     }`,
-  },
+        availableColumns: ["Success", "Error", "Error1"]
+    },
 };
 
 export default DashboardInputs;

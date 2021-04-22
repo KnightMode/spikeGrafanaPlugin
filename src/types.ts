@@ -1,4 +1,4 @@
-import { DataQuery, DataSourceJsonData, FieldType } from '@grafana/data';
+import { DataQuery, DataSourceJsonData, FieldType, SelectableValue } from '@grafana/data';
 
 interface JsonField {
   name?: string;
@@ -16,6 +16,7 @@ export interface JsonApiQuery extends DataQuery {
   dashboardName: string;
   method: string;
   urlPath: string;
+  childColumns: SelectableValue<string>[];
   queryParams: string;
   params: Array<Pair<string, string>>;
   headers: Array<Pair<string, string>>;

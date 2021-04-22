@@ -9,6 +9,7 @@ import {
   CodeEditor,
   useTheme,
   InfoBox,
+  MultiSelect
 } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { JsonApiQuery, defaultQuery, JsonApiDataSourceOptions, Pair } from './types';
@@ -22,6 +23,7 @@ interface Props extends QueryEditorProps<JsonDataSource, JsonApiQuery, JsonApiDa
 }
 export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limitFields, datasource, range }) => {
   const [bodyType, setBodyType] = useState('plaintext');
+  const [selected, setSelected] = useState<any>([]);
   const [tabIndex, setTabIndex] = useState(0);
   const [dashboardName, setDashboardName] = useState('');
   const theme = useTheme();
@@ -56,24 +58,38 @@ export const QueryEditor: React.FC<Props> = ({ onRunQuery, onChange, query, limi
       ...query,
       dashboardName,
     });
-    onRunQuery();
+    // onRunQuery();
   };
+
 
   const tabs = [
     {
       title: 'Fields',
       content: fields
         ? fields.map((_field, index) => (
-            <div key={index}>
-              <Select
-                value={query.dashboardName}
-                options={[{ label: 'Service Health Summary', value: 'svcHealthSummary' }]}
-                onChange={v => {
-                  onHandleDashboardChange(v.value);
-                }}
-              />
-            </div>
-          ))
+          <div key={index}>
+            <Select
+              value={query.dashboardName}
+              options={[{ label: 'Service Health Summary', value: 'svcHealthSummary' }]}
+              onChange={v => {
+                onHandleDashboardChange(v.value);
+              }}
+            />
+            <MultiSelect
+              value={selected}
+              options={[{ label: 'Success', value: 'Success', index:0 },
+              { label: 'Error', value: 'Error', index:1 },
+              { label: 'Technical Error', value: 'Error1', index:2 }]}
+              onChange={(v) => {
+                setSelected([...v])
+                onChange({
+                  ...query,
+                  childColumns: [...v],
+                });
+                onRunQuery();
+              }} />
+          </div>
+        ))
         : null,
     },
     {

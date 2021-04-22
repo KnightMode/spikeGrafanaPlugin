@@ -101,6 +101,11 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
   }
 
   async doRequest(query: JsonApiQuery, range?: TimeRange, scopedVars?: ScopedVars) {
+    let cVal = query.childColumns.map(elem => {
+      return { value: elem.value, index: elem.index }
+    });
+    console.log('Child columns are: ', cVal);
+
     const selectedDashboard = DashboardInputs[query.dashboardName];
     const replaceWithVars = replace(scopedVars, range);
     let columns: any[] = [];
@@ -128,8 +133,26 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     let childColumnVal = JSONPath({ path: selectedDashboard.fields[0].childFieldNames, json: this.json });
     baseFieldValues = JSONPath({ path: selectedDashboard.fields[0].baseField, json: this.json });
     childFieldValues = JSONPath({ path: selectedDashboard.fields[0].childFieldValues, json: this.json });
-    childColumnVal.forEach((elem: any) => columns.push(elem));
-    chunkedVals = _.chunk(childFieldValues, columns.length - 1);
+    console.log('Child field values: ', childFieldValues);
+    console.log('From json path: ', childColumnVal.length -1);
+    cVal.forEach((elem: any) => columns.push(elem.value));
+    console.log('col len: ', columns.length-1)
+    chunkedVals = _.chunk(childFieldValues, childColumnVal.length);
+
+    console.log(chunkedVals);
+
+    let indexesToPick = cVal.map(elem=> elem.index);
+    console.log(indexesToPick);
+    let finale: any[][] = [];
+    chunkedVals.forEach(chunkVal=>{
+      let finalVal: any[] = [];
+      indexesToPick.forEach(indexToPick=>{
+        finalVal.push(chunkVal[indexToPick]);
+      })
+      finale.push(finalVal);
+    })
+
+    console.log('Finale vala: ', finale);
 
     const frame = new MutableDataFrame({
       refId: query.refId,
@@ -139,7 +162,7 @@ export class JsonDataSource extends DataSourceApi<JsonApiQuery, JsonApiDataSourc
     baseFieldValues.forEach((elem, index) => {
       let frameResult = [];
       frameResult.push(elem);
-      let currentChunk = chunkedVals[index];
+      let currentChunk = finale[index];
       currentChunk.forEach((element: any) => {
         frameResult.push(element);
       });
@@ -174,8 +197,8 @@ const replace = (scopedVars?: any, range?: TimeRange) => (str: string): string =
 const replaceMacros = (str: string, range?: TimeRange) => {
   return range
     ? str
-        .replace(/\$__unixEpochFrom\(\)/g, range.from.unix().toString())
-        .replace(/\$__unixEpochTo\(\)/g, range.to.unix().toString())
+      .replace(/\$__unixEpochFrom\(\)/g, range.from.unix().toString())
+      .replace(/\$__unixEpochTo\(\)/g, range.to.unix().toString())
     : str;
 };
 
